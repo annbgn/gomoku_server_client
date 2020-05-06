@@ -59,7 +59,10 @@ class Game {
 
 	auto cellsAround (Position pos, Direction d) {
 	// d - is an element of  alldirections so it might be Direction(1,0), Direction(0,1), Direction(1,1), Direction(1,-1)
-	return around(pos, d, 4).map!(p=>field[p.i][p.j]);
+	auto helperfunc = (Position p) {if ((p.i < rows) &&(p.j < cols)) return field[p.i][p.j]; return '\0';}; //allows not to get rangeerror and not affect hassequence logic
+	auto res = around(pos, d, 4).map!(p=> helperfunc(p)); 
+	writeln(res);
+	return res;
   }
 
 	bool gameOver(Position pos, char mark){
@@ -105,13 +108,17 @@ struct PosToDirRange {
 }
 
 PosToDirRange around(Position center, Direction dir, uint radius) {
+	// returns radius(4) nearest points to center(i,j) in chosen direction
+	// if near border, then less than 4
 	uint left = min(radius, borderDistance(center, minusDir(dir)));
 	uint right = min(radius, borderDistance(center, dir)) + 1;
-	return PosToDirRange(
+	auto res = PosToDirRange(
 		Position(center.i - dir.i*left, center.j - dir.j*left),
 		Position(center.i + dir.i*right, center.j + dir.j*right),
 		dir
 	);
+	writeln(res);
+	return res;
 }
 
 
@@ -122,7 +129,7 @@ uint borderDistance(uint p, int d) {
 		return p;
 	}
 	else if( d== 0) {
-		return 18;
+		return 18;  //why 18? 14+4?
 	}
 	else {
 		return 18 -p;
