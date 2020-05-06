@@ -61,9 +61,9 @@ class Game {
 	return around(pos, d, 4).map!(p=>field[p.i][p.j]);
   }
 
-	bool gameOver(Position pos){
+	bool gameOver(Position pos, char mark){
 		bool ended = 
-			allDirections.any!(d => cellsAround(pos, d).hasSequence('X', 5));
+			allDirections.any!(d => cellsAround(pos, d).hasSequence(mark, 5));
 		
 		return ended;
 	}
@@ -203,10 +203,7 @@ void main () @trusted {
 				game.setInput(inputPosition);
 				inputString = inputString ~ "\r\n";
 				conn.write(inputString);
-				gameOver = game.gameOver(inputPosition);
-				if(!gameOver) game.changeCurrent();
-				system("cls");
-				game.render();
+				gameOver = game.gameOver(inputPosition, 'O');
 			}
 			else {
 				write("Waiting for X's turn..\n");
@@ -214,12 +211,13 @@ void main () @trusted {
 				writeln("received ", opponentInputString);
 				auto opponentInputPosition = readInput(opponentInputString);
 				game.setInput(opponentInputPosition);
-				gameOver = game.gameOver(opponentInputPosition);
+				gameOver = game.gameOver(opponentInputPosition, 'X');
 				write("got the message");
-				if(!gameOver) game.changeCurrent();
+				
+			}
+			if(!gameOver) game.changeCurrent();
 				system("cls");
 				game.render();
-			}
 		}
 		writeln("Congratulations, ", game.current, " !");
 	}});

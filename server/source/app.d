@@ -58,12 +58,13 @@ class Game {
 
 
 	auto cellsAround (Position pos, Direction d) {
+	// d - is an element of  alldirections so it might be Direction(1,0), Direction(0,1), Direction(1,1), Direction(1,-1)
 	return around(pos, d, 4).map!(p=>field[p.i][p.j]);
   }
 
-	bool gameOver(Position pos){
+	bool gameOver(Position pos, char mark){
 		bool ended = 
-			allDirections.any!(d => cellsAround(pos, d).hasSequence('X', 5));
+			allDirections.any!(d => cellsAround(pos, d).hasSequence(mark, 5)); //point pos(i,j) in any of direcrions of alldirections has 5X sequence ( BUT CAN IT BE 0????)
 		
 		return ended;
 	}
@@ -78,7 +79,7 @@ bool hasSequence(Range, V) (Range r, V val, size_t target) {
 	foreach(e; r){
 		if(e == val){
 			counter++;
-
+			// cool place to embed ai logic
 			if(counter == target)
 				return true;
 		}
@@ -202,10 +203,8 @@ void main () @trusted {
 				game.setInput(inputPosition);
 				inputString = inputString ~ "\r\n";
 				conn.write(inputString);
-				gameOver = game.gameOver(inputPosition);
-				if(!gameOver) game.changeCurrent();
-				system("cls");
-				game.render();
+				gameOver = game.gameOver(inputPosition, 'X');
+				
 				
 			}
 			else {
@@ -214,11 +213,12 @@ void main () @trusted {
 				writeln("received ", opponentInputString);
 				auto opponentInputPosition = readInput(opponentInputString);
 				game.setInput(opponentInputPosition);
-				gameOver = game.gameOver(opponentInputPosition);
-				if(!gameOver) game.changeCurrent();
+				gameOver = game.gameOver(opponentInputPosition, 'O');
+				
+			}
+			if(!gameOver) game.changeCurrent();
 				system("cls");
 				game.render();
-			}
 		}
 		writeln("Congratulations, ", game.current, " !");
 
