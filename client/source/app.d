@@ -58,7 +58,8 @@ class Game {
 
 
 	auto cellsAround (Position pos, Direction d) {
-	return around(pos, d, 4).map!(p=>field[p.i][p.j]);
+	auto helperfunc = (Position p) {if ((p.i < rows) &&(p.j < cols)) return field[p.i][p.j]; return '\0';}; 
+	return around(pos, d, 4).map!(p=>helperfunc(p));
   }
 
 	bool gameOver(Position pos, char mark){
