@@ -1,3 +1,4 @@
 1. no AI :)
 2. duplicated logic for game
-3. no cli argparser. hardcoded amount of rows and host:port
+3. allow chosing X or O
+4. no DRAW

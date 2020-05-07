@@ -69,9 +69,11 @@ class Game {
 	bool gameOver(Position pos, char mark){
 		bool ended = 
 			allDirections.any!(d => cellsAround(pos, d).hasSequence(mark, 5));
-		
-		return ended;
+		bool draw = is_draw();|
+		return (ended || draw);
 	}
+
+	bool is_draw (){return False;}
 
 	void setInput(Position pos)  @safe {
 		field[pos.i][pos.j] = current;
