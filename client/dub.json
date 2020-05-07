@@ -4,11 +4,13 @@
 	],
 	"copyright": "Copyright © 2020, annbgn",
 	"dependencies": {
+		"cli-d": "~>0.1.1",
 		"vibe-d": "~>0.8.2"
 	},
 	"description": "A simple vibe.d client application.",
 	"license": "proprietary",
 	"name": "gomoku_client",
-
-	"subConfigurations": {"vibe-d": "win32"} 
+	"subConfigurations": {
+		"vibe-d": "win32"
+	}
 }

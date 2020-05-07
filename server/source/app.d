@@ -187,7 +187,8 @@ class ConsoleStream : IControlStream {
 	TCPConnection conn;
 }
 */
-void main () @trusted {
+
+void main (	) @trusted {
 	listenTCP(7000,(conn) {
 		Game game = new Game;
 		game.render();
@@ -228,7 +229,6 @@ void main () @trusted {
 				game.render();
 		}
 		writeln("Congratulations, ", game.current, " !");
-
 	});
 	runApplication();
 }
