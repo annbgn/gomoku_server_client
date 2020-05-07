@@ -1,5 +1,3 @@
-1. no diagonal checks
-2. letters larger than k don't work
-3. no AI :)
-4. duplicated logic for game
-5. no cli argparser. hardcoded amount of rows and host:port
+1. no AI :)
+2. duplicated logic for game
+3. no cli argparser. hardcoded amount of rows and host:port
