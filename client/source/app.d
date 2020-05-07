@@ -5,6 +5,10 @@ import std.string;
 import std.algorithm;
 import core.stdc.stdlib;
 import vibe.d;
+import clid;
+import std.format : format;
+import core.exception;
+import std.conv;
 
 class Game { 
 	const uint rows = 14;
@@ -179,10 +183,42 @@ class ConsoleStream : IControlStream {
 	TCPConnection conn;
 }
 */
+
+private struct CLIargs
+{
+  @Parameter("hostport")
+    @Required
+
+  string hostport;
+}
+
+struct HostPort {
+	string host = "127.0.0.1";
+	ushort port = 7000;
+}
+
+HostPort parse_cli_args (string input) {
+	auto splitted =  input.split();
+	string h; ushort p;
+	try {
+	h = splitted[0];  //todo: validate with regexp
+	p = to!ushort(splitted[1]);
+	}
+	catch (RangeError e) return HostPort();
+	catch( ConvException e) return HostPort();
+	return HostPort(h, p);
+}
+
 void main () @trusted {
+  auto config = parseArguments!CLIargs();
+	string[] args = ["--hostport"];
+	setCommandLineArgs(args);
+	auto hp = parse_cli_args(config.hostport);
+	writeln(hp.host);
+	writeln(hp.port);	
 	runTask({ {
 		writeln("start");
-		auto conn = connectTCP("127.0.0.1", 7000);
+		auto conn = connectTCP(hp.host, hp.port);
 		Game game = new Game;
 		game.render();
 		string inputString = "";
