@@ -214,7 +214,6 @@ HostPort parse_cli_args (string input) {
 
 void validate_initial_input(string s){
 	bool ok = ((s != "X\r\n") || (s != "O\r\n"));
-	writeln(s.length, ' ', s[0]);
 	enforce(ok, "server sucks");  //returns ok or exception
 }
 
@@ -236,7 +235,7 @@ void main () @trusted {
 
 		// server says client if the latter is X or O
 		string initial_message = cast(string)conn.readLine();  // todo rename everything which looks pythonic
-		validate_initial_input(initial_message); // rases exception
+		//validate_initial_input(initial_message); // rases exception
 		char client_mark = initial_message[0];
 		writeln("client plays for  ", client_mark);
 
