@@ -1,0 +1,6 @@
+*.dll
+*.exe
+server/.dub
+client/.dub
+server/dub.selections.json
+client/dub.selections.json

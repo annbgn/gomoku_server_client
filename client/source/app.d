@@ -11,150 +11,157 @@ import core.exception;
 import std.conv;
 import std.exception;
 
-class Game { 
-	const uint rows = 15;
-	const uint cols = 15;
-	char[rows][cols] field;
-	char current = 'X'; 
-	char server_mark;
-	char client_mark;
-	Direction[] allDirections = [Direction(1,0), Direction(0,1), Direction(1,1), Direction(1,-1)];
+class Game {
+    const uint rows = 15;
+    const uint cols = 15;
+    char[rows][cols] field;
+    char current = 'X';
+    char server_mark;
+    char client_mark;
+    Direction[] allDirections = [
+        Direction(1, 0), Direction(0, 1), Direction(1, 1), Direction(1, -1)
+    ];
 
-	
-	void render () @safe {
-		write("  ");
-		char letter = 'A';
-		for(int i = 0; i < cols; i++){
-			write("|");
-			write(letter);
-			letter++;
-		}
-		write("|\n");
+    void render() @safe {
+        write("  ");
+        char letter = 'A';
+        for (int i = 0; i < cols; i++) {
+            write("|");
+            write(letter);
+            letter++;
+        }
+        write("|\n");
 
-		char letter2 = 'a';
-		for(int i = 0; i<rows; i++) {
-			write("  ");
-			for(int j = 0; j<cols;j++){
-				write("+-");
-			}
-			write("+\n ");
-			write(letter2);
-			for(int j = 0; j<cols;j++){
-				write("|");
-				if(field[i][j]!= 'X' && field[i][j]!='O')
-					write(" ");
-				else
-					write(field[i][j]);
-			}
-			write("|\n");
-			letter2++;
-			}
-		write("  ");
-		for(int j = 0; j<cols;j++){
-				write("+-");
-			}
-			write("+\n");
-	}
+        char letter2 = 'a';
+        for (int i = 0; i < rows; i++) {
+            write("  ");
+            for (int j = 0; j < cols; j++) {
+                write("+-");
+            }
+            write("+\n ");
+            write(letter2);
+            for (int j = 0; j < cols; j++) {
+                write("|");
+                if (field[i][j] != 'X' && field[i][j] != 'O')
+                    write(" ");
+                else
+                    write(field[i][j]);
+            }
+            write("|\n");
+            letter2++;
+        }
+        write("  ");
+        for (int j = 0; j < cols; j++) {
+            write("+-");
+        }
+        write("+\n");
+    }
 
-	void changeCurrent() @safe{current = reverse_mark(current);}
+    void changeCurrent() @safe {
+        current = reverse_mark(current);
+    }
 
+    auto cellsAround(Position pos, Direction d) {
+        auto helperfunc = (Position p) {
+            if ((p.i < rows) && (p.j < cols))
+                return field[p.i][p.j];
+            return '\0';
+        };
+        return around(pos, d, 4).map!(p => helperfunc(p));
+    }
 
-	auto cellsAround (Position pos, Direction d) {
-	auto helperfunc = (Position p) {if ((p.i < rows) &&(p.j < cols)) return field[p.i][p.j]; return '\0';}; 
-	return around(pos, d, 4).map!(p=>helperfunc(p));
-  }
+    bool gameOver(Position pos, char mark) {
+        bool ended = allDirections.any!(d => cellsAround(pos, d).hasSequence(mark, 5));
+        bool draw = is_draw();
+        return (ended || draw);
+    }
 
-	bool gameOver(Position pos, char mark){
-		bool ended = 
-			allDirections.any!(d => cellsAround(pos, d).hasSequence(mark, 5));
-		bool draw = is_draw();
-		return (ended || draw);
-	}
+    bool is_draw() {
+        return false;
+    }
 
-	bool is_draw (){return false;}
+    void setInput(Position pos) @safe {
+        field[pos.i][pos.j] = current;
+    }
 
-	void setInput(Position pos)  @safe {
-		field[pos.i][pos.j] = current;
-	}
-	
 }
-bool hasSequence(Range, V) (Range r, V val, size_t target) {
-	size_t counter = 0;
-	foreach(e; r){
-		if(e == val){
-			counter++;
 
-			if(counter == target)
-				return true;
-		}
-		else
-			counter = 0;
-	}
-	return false;
+bool hasSequence(Range, V)(Range r, V val, size_t target) {
+    size_t counter = 0;
+    foreach (e; r) {
+        if (e == val) {
+            counter++;
+
+            if (counter == target)
+                return true;
+        }
+        else
+            counter = 0;
+    }
+    return false;
 }
 
 struct PosToDirRange {
-	Position front;
-	Position end;
-	Direction dir;
+    Position front;
+    Position end;
+    Direction dir;
 
-	bool empty () {
-		return front == end;
-	}
+    bool empty() {
+        return front == end;
+    }
 
-	void popFront() {
-		front.i += dir.i;
-		front.j += dir.j;
-	}
+    void popFront() {
+        front.i += dir.i;
+        front.j += dir.j;
+    }
 }
 
 PosToDirRange around(Position center, Direction dir, uint radius) {
-	uint left = min(radius, borderDistance(center, minusDir(dir)));
-	uint right = min(radius, borderDistance(center, dir)) + 1;
-	return PosToDirRange(
-		Position(center.i - dir.i*left, center.j - dir.j*left),
-		Position(center.i + dir.i*right, center.j + dir.j*right),
-		dir
-	);
+    uint left = min(radius, borderDistance(center, minusDir(dir)));
+    uint right = min(radius, borderDistance(center, dir)) + 1;
+    return PosToDirRange(Position(center.i - dir.i * left,
+            center.j - dir.j * left), Position(center.i + dir.i * right,
+            center.j + dir.j * right), dir);
 }
-
-
-
 
 uint borderDistance(uint p, int d) {
-	// 14 is field rows(=cols) -1
-	if(d<0) return p;
-	else if( d== 0) return 14;
-	else return 14 -p;
+    // 14 is field rows(=cols) -1
+    if (d < 0)
+        return p;
+    else if (d == 0)
+        return 14;
+    else
+        return 14 - p;
 }
 
-uint borderDistance(Position pos, Direction dir){
-	return min(borderDistance(pos.i, dir.i),
-			borderDistance(pos.j, dir.j));
+uint borderDistance(Position pos, Direction dir) {
+    return min(borderDistance(pos.i, dir.i), borderDistance(pos.j, dir.j));
 }
 
 struct Position {
-	uint i;
-	uint j;
-}
-struct Direction {
-	uint i,j;
-		
-}
-Direction minusDir(Direction d) {
-	Direction dir;
-	dir.i=-d.i;
-	dir.j=-d.j;
-	return dir;
+    uint i;
+    uint j;
 }
 
-Position readInput(string s){
-	int x = s[0] - 'a';
-	int y = s[1] - 'A';
-	Position input;
-	input.i = x;
-	input.j = y;
-	return input;
+struct Direction {
+    uint i, j;
+
+}
+
+Direction minusDir(Direction d) {
+    Direction dir;
+    dir.i = -d.i;
+    dir.j = -d.j;
+    return dir;
+}
+
+Position readInput(string s) {
+    int x = s[0] - 'a';
+    int y = s[1] - 'A';
+    Position input;
+    input.i = x;
+    input.j = y;
+    return input;
 }
 /*
 interface IControlStream {
@@ -179,92 +186,104 @@ class ConsoleStream : IControlStream {
 }
 */
 
-private struct CLIargs
-{
-  @Parameter("hostport")
-    @Required
-
-  string hostport;
+private struct CLIargs {
+    @Parameter("hostport")
+    @Required string hostport;
 }
 
 struct HostPort {
-	string host = "127.0.0.1";
-	ushort port = 7000;
+    string host = "127.0.0.1";
+    ushort port = 7000;
 }
 
-HostPort parse_cli_args (string input) {
-	auto splitted =  input.split();
-	string h; ushort p;
-	try {
-	h = splitted[0];  //todo: validate with regexp
-	p = to!ushort(splitted[1]);
-	}
-	catch (RangeError e) return HostPort();
-	catch( ConvException e) return HostPort();
-	return HostPort(h, p);
+HostPort parse_cli_args(string input) {
+    auto splitted = input.split();
+    string h;
+    ushort p;
+    try {
+        h = splitted[0]; //todo: validate with regexp
+        p = to!ushort(splitted[1]);
+    }
+    catch (RangeError e)
+        return HostPort();
+    catch (ConvException e)
+        return HostPort();
+    return HostPort(h, p);
 }
 
-void validate_initial_input(string s){
-	bool ok = ((s != "X\r\n") || (s != "O\r\n"));
-	enforce(ok, "server sucks");  //returns ok or exception
+void validate_initial_input(string s) {
+    bool ok = ((s != "X\r\n") || (s != "O\r\n"));
+    enforce(ok, "server sucks"); //returns ok or exception
 }
 
-char reverse_mark(char mark) @safe { if (mark == 'X') return 'O'; return 'X';}
+char reverse_mark(char mark) @safe {
+    if (mark == 'X')
+        return 'O';
+    return 'X';
+}
 
-void main () @trusted {
-  auto config = parseArguments!CLIargs();
-	string[] args = ["--hostport"];
-	setCommandLineArgs(args);
-	auto hp = parse_cli_args(config.hostport);
-	
-	runTask({ {
-		auto conn = connectTCP(hp.host, hp.port);
-		Game game = new Game;
-		game.render();
-		string inputString = "";
-		bool gameOver = false;
-		Position inputPosition;
+void main() @trusted {
+    auto config = parseArguments!CLIargs();
+    string[] args = ["--hostport"];
+    setCommandLineArgs(args);
+    auto hp = parse_cli_args(config.hostport);
 
-		// server says client if the latter is X or O
-		string initial_message = cast(string)conn.readLine();  // todo rename everything which looks pythonic
-		char client_mark = initial_message[0];
-		game.client_mark = client_mark;
-		game.server_mark  = reverse_mark(game.client_mark);
+    runTask({
+    
+        {
+            auto conn = connectTCP(hp.host, hp.port);
+            Game game = new Game;
+            game.render();
+            string inputString = "";
+            bool gameOver = false;
+            Position inputPosition;
 
-		writeln("client: ", game.client_mark, " server: ", game.server_mark);
+            // server says client if the latter is X or O
+            string initial_message = cast(string) conn.readLine(); // todo rename everything which looks pythonic
+            char client_mark = initial_message[0];
+            game.client_mark = client_mark;
+            game.server_mark = reverse_mark(game.client_mark);
 
-		while(!gameOver) {
+            writeln("client: ", game.client_mark, " server: ", game.server_mark);
 
-			writeln();
-			if(game.current == game.client_mark ) {
-				
-				while(1) {
-					write("Hi, Client (", game.client_mark, ")! hint: type aA: ");
-					inputString = readln();
-					inputPosition = readInput(inputString); 
-					if((inputString.length != 2+1 )|| (inputPosition.i > game.rows ) || (inputPosition.j > game.cols)||(game.field[inputPosition.i][inputPosition.j]==game.client_mark)|| (game.field[inputPosition.i][inputPosition.j]==game.server_mark))
-						write("bad move! \n");
-					else break;
-				}
-				game.setInput(inputPosition);
-				inputString = inputString ~ "\r\n";
-				conn.write(inputString);
-				gameOver = game.gameOver(inputPosition, game.client_mark);
-			}
-			else {
-				write("Waiting for Server(", game.server_mark, ")'s turn..\n");
-				string opponentInputString = cast(string)conn.readLine();
-				writeln("received ", opponentInputString);
-				auto opponentInputPosition = readInput(opponentInputString);
-				game.setInput(opponentInputPosition);
-				gameOver = game.gameOver(opponentInputPosition, game.server_mark);
-				
-			}
-			if(!gameOver) game.changeCurrent();
-				system("cls");
-				game.render();
-		}
-		writeln("Congratulations, ", game.current, " !");
-	}});
-	runApplication();
-	}
+            while (!gameOver) {
+
+                writeln();
+                if (game.current == game.client_mark) {
+
+                    while (1) {
+                        write("Hi, Client (", game.client_mark, ")! hint: type aA: ");
+                        inputString = readln();
+                        inputPosition = readInput(inputString);
+                        if ((inputString.length != 2 + 1) || (inputPosition.i > game.rows)
+                            || (inputPosition.j > game.cols)
+                            || (game.field[inputPosition.i][inputPosition.j] == game.client_mark)
+                            || (game.field[inputPosition.i][inputPosition.j] == game.server_mark))
+                            write("bad move! \n");
+                        else
+                            break;
+                    }
+                    game.setInput(inputPosition);
+                    inputString = inputString ~ "\r\n";
+                    conn.write(inputString);
+                    gameOver = game.gameOver(inputPosition, game.client_mark);
+                }
+                else {
+                    write("Waiting for Server(", game.server_mark, ")'s turn..\n");
+                    string opponentInputString = cast(string) conn.readLine();
+                    writeln("received ", opponentInputString);
+                    auto opponentInputPosition = readInput(opponentInputString);
+                    game.setInput(opponentInputPosition);
+                    gameOver = game.gameOver(opponentInputPosition, game.server_mark);
+
+                }
+                if (!gameOver)
+                    game.changeCurrent();
+                system("cls");
+                game.render();
+            }
+            writeln("Congratulations, ", game.current, " !");
+        }
+    });
+    runApplication();
+}
