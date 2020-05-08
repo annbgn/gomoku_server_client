@@ -1,11 +1,17 @@
 ### a client and a server for gomoku game
 
-#### input format
+#### basics
 
-aA
+#### input format
+- server sends client "X\r\n" or "O\r\n". it determines client's mark. 
+
+- aA
 where first letter should be lowercase and it stands for row and second letter schould be uppercase and stands for column
 // todo make case insensitive
-the field is 15x15 so last letter is nN
+the field is 15x15 so last letter is oO
+if input is wrong, you'll be prompted to reinput
+
+- game terminates when server replies with "WON\r\n" or "LOST\r\n" or "DRAW\r\n"
 
 #### how to run
 
