@@ -4,6 +4,7 @@
 	],
 	"copyright": "Copyright © 2020, annbgn",
 	"dependencies": {
+		"dfmt": "~>0.12.0",
 		"vibe-d": "~>0.8.2"
 	},
 	"description": "A simple vibe.d server application.",
