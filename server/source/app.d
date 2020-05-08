@@ -125,15 +125,10 @@ PosToDirRange around(Position center, Direction dir, uint radius) {
 
 
 uint borderDistance(uint p, int d) {
-	if(d<0) {
-		return p;
-	}
-	else if( d== 0) {
-		return 18;  //why 18? 14+4?
-	}
-	else {
-		return 18 -p;
-	}
+	// 14 is field rows(=cols) -1
+	if(d<0) return p;
+	else if( d== 0) return 14;
+	else return 14 -p;
 }
 
 uint borderDistance(Position pos, Direction dir){
@@ -233,7 +228,7 @@ void main (	) @trusted {
 				
 			}
 			if(!gameOver) game.changeCurrent();
-				system("cls");
+				//system("cls");
 				game.render();
 		}
 		writeln("Congratulations, ", game.current, " !");
