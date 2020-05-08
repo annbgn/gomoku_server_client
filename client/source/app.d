@@ -9,10 +9,11 @@ import clid;
 import std.format : format;
 import core.exception;
 import std.conv;
+import std.exception;
 
 class Game { 
-	const uint rows = 14;
-	const uint cols = 14;
+	const uint rows = 15;
+	const uint cols = 15;
 	char[rows][cols] field;
 	char current = 'X'; 
 	Direction[] allDirections = [Direction(1,0), Direction(0,1), Direction(1,1), Direction(1,-1)];
@@ -69,11 +70,11 @@ class Game {
 	bool gameOver(Position pos, char mark){
 		bool ended = 
 			allDirections.any!(d => cellsAround(pos, d).hasSequence(mark, 5));
-		bool draw = is_draw();|
+		bool draw = is_draw();
 		return (ended || draw);
 	}
 
-	bool is_draw (){return False;}
+	bool is_draw (){return false;}
 
 	void setInput(Position pos)  @safe {
 		field[pos.i][pos.j] = current;
@@ -211,6 +212,12 @@ HostPort parse_cli_args (string input) {
 	return HostPort(h, p);
 }
 
+void validate_initial_input(string s){
+	bool ok = ((s != "X\r\n") || (s != "O\r\n"));
+	writeln(s.length, ' ', s[0]);
+	enforce(ok, "server sucks");  //returns ok or exception
+}
+
 void main () @trusted {
   auto config = parseArguments!CLIargs();
 	string[] args = ["--hostport"];
@@ -226,10 +233,17 @@ void main () @trusted {
 		string inputString = "";
 		bool gameOver = false;
 		Position inputPosition;
+
+		// server says client if the latter is X or O
+		string initial_message = cast(string)conn.readLine();  // todo rename everything which looks pythonic
+		validate_initial_input(initial_message); // rases exception
+		char client_mark = initial_message[0];
+		writeln("client plays for  ", client_mark);
+
 		while(!gameOver) {
 
 			writeln();
-			if(game.current == 'O') {
+			if(game.current == client_mark) {
 				
 				while(1) {
 					write("Hi, O! hint: type aA: ");
