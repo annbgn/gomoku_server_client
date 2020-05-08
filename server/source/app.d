@@ -7,8 +7,8 @@ import core.stdc.stdlib;
 import vibe.d;
 
 class Game { 
-	const uint rows = 14;
-	const uint cols = 14;
+	const uint rows = 15;
+	const uint cols = 15;
 	char[rows][cols] field;
 	char current = 'X'; 
 	Direction[] allDirections = [Direction(1,0), Direction(0,1), Direction(1,1), Direction(1,-1)];
@@ -68,11 +68,11 @@ class Game {
 	bool gameOver(Position pos, char mark){
 		bool ended = 
 			allDirections.any!(d => cellsAround(pos, d).hasSequence(mark, 5)); //point pos(i,j) in any of direcrions of alldirections has 5X sequence ( BUT CAN IT BE 0????)
-		bool draw = is_draw();|
+		bool draw = is_draw();
 		return (ended||draw);
 	}
 
-	bool is_draw (){return False;}
+	bool is_draw (){return false;}
 
 	void setInput(Position pos)  @safe {
 		field[pos.i][pos.j] = current;
@@ -197,6 +197,9 @@ void main (	) @trusted {
 		string inputString = "";
 		bool gameOver = false;
 		Position inputPosition;
+
+		// send client it's mark
+		conn.write("O\r\n");  // todo randomize (based on mod2 of time)
 		while(!gameOver) {
 
 			writeln();
