@@ -16,6 +16,8 @@ class Game {
 	const uint cols = 15;
 	char[rows][cols] field;
 	char current = 'X'; 
+	char server_mark;
+	char client_mark;
 	Direction[] allDirections = [Direction(1,0), Direction(0,1), Direction(1,1), Direction(1,-1)];
 
 	
@@ -54,12 +56,7 @@ class Game {
 			write("+\n");
 	}
 
-	void changeCurrent() @safe{
-		if(current == 'X')
-			current = 'O';
-		else
-			current = 'X';
-	}
+	void changeCurrent() @safe{current = reverse_mark(current);}
 
 
 	auto cellsAround (Position pos, Direction d) {
@@ -217,15 +214,15 @@ void validate_initial_input(string s){
 	enforce(ok, "server sucks");  //returns ok or exception
 }
 
+char reverse_mark(char mark) @safe { if (mark == 'X') return 'O'; return 'X';}
+
 void main () @trusted {
   auto config = parseArguments!CLIargs();
 	string[] args = ["--hostport"];
 	setCommandLineArgs(args);
 	auto hp = parse_cli_args(config.hostport);
-	writeln(hp.host);
-	writeln(hp.port);	
+	
 	runTask({ {
-		writeln("start");
 		auto conn = connectTCP(hp.host, hp.port);
 		Game game = new Game;
 		game.render();
@@ -235,36 +232,37 @@ void main () @trusted {
 
 		// server says client if the latter is X or O
 		string initial_message = cast(string)conn.readLine();  // todo rename everything which looks pythonic
-		//validate_initial_input(initial_message); // rases exception
 		char client_mark = initial_message[0];
-		writeln("client plays for  ", client_mark);
+		game.client_mark = client_mark;
+		game.server_mark  = reverse_mark(game.client_mark);
+
+		writeln("client: ", game.client_mark, " server: ", game.server_mark);
 
 		while(!gameOver) {
 
 			writeln();
-			if(game.current == client_mark) {
+			if(game.current == game.client_mark ) {
 				
 				while(1) {
-					write("Hi, O! hint: type aA: ");
+					write("Hi, Client (", game.client_mark, ")! hint: type aA: ");
 					inputString = readln();
 					inputPosition = readInput(inputString); 
-					if((inputString.length != 2+1 )|| (inputPosition.i > game.rows ) || (inputPosition.j > game.cols)||(game.field[inputPosition.i][inputPosition.j]=='X')|| (game.field[inputPosition.i][inputPosition.j]=='O'))
+					if((inputString.length != 2+1 )|| (inputPosition.i > game.rows ) || (inputPosition.j > game.cols)||(game.field[inputPosition.i][inputPosition.j]==game.client_mark)|| (game.field[inputPosition.i][inputPosition.j]==game.server_mark))
 						write("bad move! \n");
 					else break;
 				}
 				game.setInput(inputPosition);
 				inputString = inputString ~ "\r\n";
 				conn.write(inputString);
-				gameOver = game.gameOver(inputPosition, 'O');
+				gameOver = game.gameOver(inputPosition, game.client_mark);
 			}
 			else {
-				write("Waiting for X's turn..\n");
+				write("Waiting for Server(", game.server_mark, ")'s turn..\n");
 				string opponentInputString = cast(string)conn.readLine();
 				writeln("received ", opponentInputString);
 				auto opponentInputPosition = readInput(opponentInputString);
 				game.setInput(opponentInputPosition);
-				gameOver = game.gameOver(opponentInputPosition, 'X');
-				write("got the message");
+				gameOver = game.gameOver(opponentInputPosition, game.server_mark);
 				
 			}
 			if(!gameOver) game.changeCurrent();
