@@ -6,6 +6,7 @@
 - server sends client "X\r\n" or "O\r\n". it determines client's mark. 
 
 - aA
+
 where first letter should be lowercase and it stands for row and second letter schould be uppercase and stands for column
 // todo make case insensitive
 the field is 15x15 so last letter is oO
