@@ -6,6 +6,36 @@ import std.algorithm;
 import core.stdc.stdlib;
 import vibe.d;
 import std.datetime.timezone : LocalTime;
+import std.regex;
+import std.array : array;
+import std.algorithm : canFind;
+
+struct EstimationElem {
+    int weight;
+    string pattern;
+}
+
+//dfmt off
+const EstimationElem[] GlobalEstimationChart = [
+    EstimationElem(10000, "*****"),
+	EstimationElem(1000, " **** "),
+    EstimationElem(500, "**** "),
+	EstimationElem(400, "* ***"),
+	EstimationElem(400, "** **"),
+    EstimationElem(100, "  ***   "),
+	EstimationElem(80, "  ***  "),
+    EstimationElem(75, " ***  "),
+	EstimationElem(50, " *** "),
+	EstimationElem(50, "***  "),
+    EstimationElem(25, "* ** "),
+	EstimationElem(25, "** * "),
+	EstimationElem(25,  "*  **"),
+    EstimationElem(10, "   ***   "),
+	EstimationElem(5, " ** ")
+];
+//dfmt on
+
+const string GlobalEmptyPattern = "    *    ";
 
 class Game {
     const uint rows = 15;
@@ -57,7 +87,7 @@ class Game {
         current = reverse_mark(current);
     }
 
-    auto cellsAround(Position pos, Direction d) {
+    string cellsAround(Position pos, Direction d) {
         // d - is an element of  alldirections so it might be Direction(1,0), Direction(0,1), Direction(1,1), Direction(1,-1)
         auto helperfunc = (Position p) {
             if ((p.i < rows) && (p.j < cols))
@@ -66,7 +96,7 @@ class Game {
         }; //allows not to get rangeerror and not affect hassequence logic
         auto res = around(pos, d, 4).map!(p => helperfunc(p));
         writeln(res);
-        return res;
+        return to!string(res.array); // mapResult -> char[] -> string
     }
 
     bool gameOver(Position pos, char mark) {
@@ -76,11 +106,74 @@ class Game {
     }
 
     bool is_draw() {
+        //simply check that there are no empty cells
+        //due to lazy evaluations it'll work ok only if called after checking for win/lose, because even fully occupied board might be not draw
+        /*for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if ((field[i][j] != 'X') || (field[i][j] != 'O'))
+                    return true;
+            }
+        }*/
         return false;
     }
 
     void setInput(Position pos) @safe {
         field[pos.i][pos.j] = current;
+    }
+
+    GoodPositionToMove[] getGoodPositionsToMove(Position[] possible_moves, int depth) { //maximin
+        // not implemented!!
+        // get all empty cells
+        // get array of weight for every cell 
+        // recursively call this function <depth times> for player and opponent for every cell
+        // 
+        Position p;
+        GoodPositionToMove[] result = [];
+        int[rows][cols] cell_weights;
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++)
+                cell_weights[i][j] = 0;
+        }
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+
+                foreach (Direction d; allDirections) {
+                    string line = cellsAround(Position(i, j), d);
+                    foreach (EstimationElem weight_regex; GlobalEstimationChart) {
+                        string pattern = replace(weight_regex.pattern, '*', current);
+                        if (!matchAll(line, pattern).empty) {
+                            cell_weights[i][j] = cell_weights[i][j] + weight_regex.weight;
+                        }
+                    }
+
+                }
+                p.i = i;
+                p.j = j;
+                if (possible_moves.canFind(p))
+                    result ~= [GoodPositionToMove(p, cell_weights[i][j])];
+            }
+
+        }
+        return result;
+    }
+
+    Position where_to_move(int depth) {
+        Position[] possible_moves = [];
+
+        //todo replace loop with any! or map! for short
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if ((field[i][j] != 'X') && (field[i][j] != 'O'))
+                    possible_moves ~= [Position(i, j)];
+            }
+        }
+        if (possible_moves.length == rows * cols)
+            return Position(to!int(rows / 2), to!int(cols / 2));
+        else {
+            GoodPositionToMove[] good = getGoodPositionsToMove(possible_moves, depth);
+            writeln(good);
+            return good.sort!("a.weight > b.weight")[0].pos;
+        }
     }
 
 }
@@ -167,6 +260,15 @@ Position readInput(string s) {
     return input;
 }
 
+string writeInput(Position pos) {
+    char i = to!char(pos.i + 'a');
+    char j = to!char(pos.j + 'A');
+    string s = "";
+    s ~= i;
+    s ~= j;
+    return s;
+}
+
 /*
 interface IControlStream {
 	Position read();
@@ -193,6 +295,24 @@ char reverse_mark(char mark) @safe {
     if (mark == 'X')
         return 'O';
     return 'X';
+}
+/*
+int MINIMAX(char[] field, char current_mark, deph) : int
+    if isTerminal(field) then
+        return -heuristic(field, player)
+    end
+    score  = INFINITY
+    for child from children(field, player) do
+        s = MINIMAX(child, -player, deph+1)
+        if s < score  then score  = s
+    end
+    return score
+end
+*/
+
+struct GoodPositionToMove {
+    Position pos;
+    int weight; // = int.min;
 }
 
 void main() @trusted {
@@ -221,7 +341,7 @@ void main() @trusted {
 
             writeln();
             if (game.current == game.server_mark) {
-
+                /*
                 while (1) {
                     write("Hi, Server (", game.server_mark, ")! hint: type aA: ");
                     inputString = readln();
@@ -234,10 +354,19 @@ void main() @trusted {
                     else
                         break;
                 }
-                game.setInput(inputPosition);
+				game.setInput(inputPosition);
                 inputString = inputString ~ "\r\n";
                 conn.write(inputString);
                 gameOver = game.gameOver(inputPosition, game.server_mark);
+				*/
+                Position move = game.where_to_move(1);
+                writeln("Hi, Server (", game.server_mark,
+                    ")! AI chose to move to position ", move);
+                game.setInput(move);
+                inputString = writeInput(move) ~ "\r\n";
+                conn.write(inputString);
+                gameOver = game.gameOver(move, game.server_mark);
+
             }
             else {
                 write("Waiting for Client (", game.client_mark, ")'s turn..\n");
