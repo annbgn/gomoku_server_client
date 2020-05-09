@@ -1,4 +1,10 @@
-1. no AI :)
+1. AI issues:
+- prefer not to place near boundaries
+- replace '**** ' estimation with 550
+- add depth flag to cli args
+- add minimax
+- add alpha-betha
+- add ai to client
 2. duplicated logic for game
-3. allow chosing X or O
-4. no DRAW
+3. no DRAW
+4. support auto and manual modes: add cli arg
