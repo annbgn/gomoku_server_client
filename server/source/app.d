@@ -95,7 +95,6 @@ class Game {
             return '\0';
         }; //allows not to get rangeerror and not affect hassequence logic
         auto res = around(pos, d, 4).map!(p => helperfunc(p));
-        writeln(res);
         return to!string(res.array); // mapResult -> char[] -> string
     }
 
@@ -107,11 +106,15 @@ class Game {
 
     bool is_draw() {
         //simply check that there are no empty cells
-		int counter = 0;
-       for (int i =0; i < rows; i++){
-	   for (int j = 0; j < cols; j++){
-	   if ((field[i][j] == 'X') || (field[i][j] == 'O')) counter++;}}
-	   if (counter == rows*cols) return true;
+        int counter = 0;
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if ((field[i][j] == 'X') || (field[i][j] == 'O'))
+                    counter++;
+            }
+        }
+        if (counter == rows * cols)
+            return true;
         return false;
     }
 
@@ -167,7 +170,6 @@ class Game {
             return Position(to!int(rows / 2), to!int(cols / 2));
         else {
             GoodPositionToMove[] good = getGoodPositionsToMove(possible_moves, depth);
-            writeln(good);
             return good.sort!("a.weight > b.weight")[0].pos;
         }
     }
@@ -212,7 +214,6 @@ PosToDirRange around(Position center, Direction dir, uint radius) {
     auto res = PosToDirRange(Position(center.i - dir.i * left,
             center.j - dir.j * left), Position(center.i + dir.i * right,
             center.j + dir.j * right), dir);
-    writeln(res);
     return res;
 }
 
@@ -269,7 +270,6 @@ char reverse_mark(char mark) @safe {
         return 'O';
     return 'X';
 }
-
 
 struct GoodPositionToMove {
     Position pos;
@@ -340,20 +340,10 @@ void main() @trusted {
             }
             if (!gameOver)
                 game.changeCurrent();
-            //system("cls");
+            system("cls");
             game.render();
         }
         writeln("Congratulations, ", game.current, " !");
     });
     runApplication();
 }
-/*
-	unittest {
-	// test case when any input with letter bigger than k causes range error
-		char[14][14] field;
-		Position pos;
-		pos  = readInput("kK\0");
-
-
-}
-*/

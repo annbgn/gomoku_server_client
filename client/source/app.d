@@ -10,7 +10,6 @@ import std.format : format;
 import core.exception;
 import std.conv;
 import std.exception;
- 
 
 import std.datetime.timezone : LocalTime;
 import std.regex;
@@ -110,11 +109,15 @@ class Game {
     }
 
     bool is_draw() {
-	int counter = 0;
-       for (int i =0; i < rows; i++){
-	   for (int j = 0; j < cols; j++){
-	   if ((field[i][j] == 'X') || (field[i][j] == 'O')) counter++;}}
-	   if (counter == rows*cols) return true;
+        int counter = 0;
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if ((field[i][j] == 'X') || (field[i][j] == 'O'))
+                    counter++;
+            }
+        }
+        if (counter == rows * cols)
+            return true;
         return false;
     }
 
@@ -122,10 +125,8 @@ class Game {
         field[pos.i][pos.j] = current;
     }
 
-
-
- GoodPositionToMove[] getGoodPositionsToMove(Position[] possible_moves, int depth) { //maximin
-       Position p;
+    GoodPositionToMove[] getGoodPositionsToMove(Position[] possible_moves, int depth) { //maximin
+        Position p;
         GoodPositionToMove[] result = [];
         int[rows][cols] cell_weights;
         for (int i = 0; i < rows; i++) {
@@ -153,7 +154,7 @@ class Game {
         return result;
     }
 
-	 Position where_to_move(int depth) {
+    Position where_to_move(int depth) {
         Position[] possible_moves = [];
 
         //todo replace loop with any! or map! for short
@@ -167,12 +168,11 @@ class Game {
             return Position(to!int(rows / 2), to!int(cols / 2));
         else {
             GoodPositionToMove[] good = getGoodPositionsToMove(possible_moves, depth);
-            writeln(good);
             return good.sort!("a.weight > b.weight")[0].pos;
         }
     }
 
-	}
+}
 
 bool hasSequence(Range, V)(Range r, V val, size_t target) {
     size_t counter = 0;
@@ -260,7 +260,6 @@ string writeInput(Position pos) {
     return s;
 }
 
-
 struct GoodPositionToMove {
     Position pos;
     int weight; // = int.min;
@@ -309,7 +308,9 @@ void main() @trusted {
     auto hp = parse_cli_args(config.hostport);
 
     runTask({
+
     
+
         {
             auto conn = connectTCP(hp.host, hp.port);
             Game game = new Game;
@@ -330,7 +331,7 @@ void main() @trusted {
 
                 writeln();
                 if (game.current == game.client_mark) {
-				/*
+                    /*
                     while (1) {
                         write("Hi, Client (", game.client_mark, ")! hint: type aA: ");
                         inputString = readln();
@@ -348,13 +349,13 @@ void main() @trusted {
                     conn.write(inputString);
                     gameOver = game.gameOver(inputPosition, game.client_mark);
 					*/
-                Position move = game.where_to_move(1);
-                writeln("Hi, Client (", game.client_mark,
-                    ")! AI chose to move to position ", move);
-                game.setInput(move);
-                inputString = writeInput(move) ~ "\r\n";
-                conn.write(inputString);
-                gameOver = game.gameOver(move, game.client_mark);
+                    Position move = game.where_to_move(1);
+                    writeln("Hi, Client (", game.client_mark,
+                        ")! AI chose to move to position ", move);
+                    game.setInput(move);
+                    inputString = writeInput(move) ~ "\r\n";
+                    conn.write(inputString);
+                    gameOver = game.gameOver(move, game.client_mark);
                 }
                 else {
                     write("Waiting for Server(", game.server_mark, ")'s turn..\n");
