@@ -11,6 +11,38 @@ import core.exception;
 import std.conv;
 import std.exception;
 
+import std.datetime.timezone : LocalTime;
+import std.regex;
+import std.array : array;
+import std.algorithm : canFind;
+
+struct EstimationElem {
+    int weight;
+    string pattern;
+}
+
+//dfmt off
+const EstimationElem[] GlobalEstimationChart = [
+    EstimationElem(10000, "*****"),
+	EstimationElem(1000, " **** "),
+    EstimationElem(500, "**** "),
+	EstimationElem(400, "* ***"),
+	EstimationElem(400, "** **"),
+    EstimationElem(100, "  ***   "),
+	EstimationElem(80, "  ***  "),
+    EstimationElem(75, " ***  "),
+	EstimationElem(50, " *** "),
+	EstimationElem(50, "***  "),
+    EstimationElem(25, "* ** "),
+	EstimationElem(25, "** * "),
+	EstimationElem(25,  "*  **"),
+    EstimationElem(10, "   ***   "),
+	EstimationElem(5, " ** ")
+];
+//dfmt on
+
+const string GlobalEmptyPattern = "    *    ";
+
 class Game {
     const uint rows = 15;
     const uint cols = 15;
@@ -67,7 +99,7 @@ class Game {
                 return field[p.i][p.j];
             return '\0';
         };
-        return around(pos, d, 4).map!(p => helperfunc(p));
+        return to!string(around(pos, d, 4).map!(p => helperfunc(p)).array);
     }
 
     bool gameOver(Position pos, char mark) {
@@ -77,11 +109,67 @@ class Game {
     }
 
     bool is_draw() {
+        int counter = 0;
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if ((field[i][j] == 'X') || (field[i][j] == 'O'))
+                    counter++;
+            }
+        }
+        if (counter == rows * cols)
+            return true;
         return false;
     }
 
     void setInput(Position pos) @safe {
         field[pos.i][pos.j] = current;
+    }
+
+    GoodPositionToMove[] getGoodPositionsToMove(Position[] possible_moves, int depth) { //maximin
+        Position p;
+        GoodPositionToMove[] result = [];
+        int[rows][cols] cell_weights;
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++)
+                cell_weights[i][j] = 0;
+        }
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+
+                foreach (Direction d; allDirections) {
+                    string line = cellsAround(Position(i, j), d);
+                    foreach (EstimationElem weight_regex; GlobalEstimationChart) {
+                        string pattern = replace(weight_regex.pattern, '*', current);
+                        if (!matchAll(line, pattern).empty) {
+                            cell_weights[i][j] = cell_weights[i][j] + weight_regex.weight;
+                        }
+                    }
+                }
+                p.i = i;
+                p.j = j;
+                if (possible_moves.canFind(p))
+                    result ~= [GoodPositionToMove(p, cell_weights[i][j])];
+            }
+        }
+        return result;
+    }
+
+    Position where_to_move(int depth) {
+        Position[] possible_moves = [];
+
+        //todo replace loop with any! or map! for short
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if ((field[i][j] != 'X') && (field[i][j] != 'O'))
+                    possible_moves ~= [Position(i, j)];
+            }
+        }
+        if (possible_moves.length == rows * cols)
+            return Position(to!int(rows / 2), to!int(cols / 2));
+        else {
+            GoodPositionToMove[] good = getGoodPositionsToMove(possible_moves, depth);
+            return good.sort!("a.weight > b.weight")[0].pos;
+        }
     }
 
 }
@@ -145,7 +233,6 @@ struct Position {
 
 struct Direction {
     uint i, j;
-
 }
 
 Direction minusDir(Direction d) {
@@ -163,28 +250,20 @@ Position readInput(string s) {
     input.j = y;
     return input;
 }
-/*
-interface IControlStream {
-	Position read();
-	void write(Position); 
+
+string writeInput(Position pos) {
+    char i = to!char(pos.i + 'a');
+    char j = to!char(pos.j + 'A');
+    string s = "";
+    s ~= i;
+    s ~= j;
+    return s;
 }
-class ConsoleStream : IControlStream {
-	Position read() {
-		string s = readln(); //aA
-		int x = s[0] - 'a';
-		int y = s[1] - 'A';
-		Position input;
-		input.i = x;
-		input.j = y;
-		return input;
-	}
-	void write(string input) {
-		writeln("Your turn was ", input[0], ", ", input[1]);
-		conn->write(input);
-	}
-	TCPConnection conn;
+
+struct GoodPositionToMove {
+    Position pos;
+    int weight; // = int.min;
 }
-*/
 
 private struct CLIargs {
     @Parameter("hostport")
@@ -229,7 +308,9 @@ void main() @trusted {
     auto hp = parse_cli_args(config.hostport);
 
     runTask({
+
     
+
         {
             auto conn = connectTCP(hp.host, hp.port);
             Game game = new Game;
@@ -250,7 +331,7 @@ void main() @trusted {
 
                 writeln();
                 if (game.current == game.client_mark) {
-
+                    /*
                     while (1) {
                         write("Hi, Client (", game.client_mark, ")! hint: type aA: ");
                         inputString = readln();
@@ -267,6 +348,14 @@ void main() @trusted {
                     inputString = inputString ~ "\r\n";
                     conn.write(inputString);
                     gameOver = game.gameOver(inputPosition, game.client_mark);
+					*/
+                    Position move = game.where_to_move(1);
+                    writeln("Hi, Client (", game.client_mark,
+                        ")! AI chose to move to position ", move);
+                    game.setInput(move);
+                    inputString = writeInput(move) ~ "\r\n";
+                    conn.write(inputString);
+                    gameOver = game.gameOver(move, game.client_mark);
                 }
                 else {
                     write("Waiting for Server(", game.server_mark, ")'s turn..\n");
