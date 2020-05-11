@@ -107,13 +107,11 @@ class Game {
 
     bool is_draw() {
         //simply check that there are no empty cells
-        //due to lazy evaluations it'll work ok only if called after checking for win/lose, because even fully occupied board might be not draw
-        /*for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < cols; j++) {
-                if ((field[i][j] != 'X') || (field[i][j] != 'O'))
-                    return true;
-            }
-        }*/
+		int counter = 0;
+       for (int i =0; i < rows; i++){
+	   for (int j = 0; j < cols; j++){
+	   if ((field[i][j] == 'X') || (field[i][j] == 'O')) counter++;}}
+	   if (counter == rows*cols) return true;
         return false;
     }
 
@@ -145,14 +143,12 @@ class Game {
                             cell_weights[i][j] = cell_weights[i][j] + weight_regex.weight;
                         }
                     }
-
                 }
                 p.i = i;
                 p.j = j;
                 if (possible_moves.canFind(p))
                     result ~= [GoodPositionToMove(p, cell_weights[i][j])];
             }
-
         }
         return result;
     }
@@ -241,7 +237,6 @@ struct Position {
 
 struct Direction {
     uint i, j;
-
 }
 
 Direction minusDir(Direction d) {
@@ -269,46 +264,12 @@ string writeInput(Position pos) {
     return s;
 }
 
-/*
-interface IControlStream {
-	Position read();
-	void write(Position); 
-}
-class ConsoleStream : IControlStream {
-	Position read() {
-		string s = readln(); //aA
-		int x = s[0] - 'a';
-		int y = s[1] - 'A';
-		Position input;
-		input.i = x;
-		input.j = y;
-		return input;
-	}
-	void write(string input) {
-		writeln("Your turn was ", input[0], ", ", input[1]);
-		conn->write(input);
-	}
-	TCPConnection conn;
-}
-*/
 char reverse_mark(char mark) @safe {
     if (mark == 'X')
         return 'O';
     return 'X';
 }
-/*
-int MINIMAX(char[] field, char current_mark, deph) : int
-    if isTerminal(field) then
-        return -heuristic(field, player)
-    end
-    score  = INFINITY
-    for child from children(field, player) do
-        s = MINIMAX(child, -player, deph+1)
-        if s < score  then score  = s
-    end
-    return score
-end
-*/
+
 
 struct GoodPositionToMove {
     Position pos;
