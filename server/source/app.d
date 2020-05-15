@@ -11,6 +11,7 @@ import std.array : array;
 import std.array : replicate;
 import std.algorithm : canFind;
 import std.datetime.systime : SysTime, Clock;
+    import std.algorithm.searching;
 
 struct EstimationElem {
     int weight;
@@ -179,18 +180,22 @@ class Game {
         int result = 0;
         string pattern;
         string line;
+		ulong c;
         foreach (Position p; filled) {
             foreach (Direction d; allDirections) {
                 line = cellsAround(p, d, fld);
                 foreach (EstimationElem weight_regex; GlobalEstimationChart) {
                     pattern = replace(weight_regex.pattern, '*', player_mark);
-                    if (!matchAll(line, pattern).empty) {
-                        result += weight_regex.weight;
-                    }
+                    //if (!matchAll(line, pattern).empty) {
+					c = count(line,pattern);
+                        result += c*weight_regex.weight;
+                    //}
                     pattern = replace(weight_regex.pattern, '*', reverse_mark(player_mark));
-                    if (!matchAll(line, pattern).empty) {
-                        result -= weight_regex.weight;
-                    }
+										c = count(line,pattern);
+
+                    //if (!matchAll(line, pattern).empty) {
+                        result -= c*weight_regex.weight;
+                    //}
                 }
             }
         }
@@ -266,28 +271,28 @@ class Game {
                 tmp = new Tree;
                 tmp.moves = child.moves ~ [MarkedPosition(pos, client_mark)];
                 tmp.root = child;
-                tmp.estimation = estimate_state(server_mark, tmp.moves);
+                //tmp.estimation = estimate_state(server_mark, tmp.moves);
                 child.children ~= [tmp];
             }
         }
 
-        writeln("processed in ", startTime - Clock.currTime());
-        /*
+        
         foreach (Tree child1; root.children) {
             foreach (Tree child2; child1.children) {
-                foreach (Position pos; get_empty_positions(child2.fld)) {
-                    //if (is_skip(pos, child2.fld)) continue;
+			auto empties = position_difference(get_empty_positions(field),
+                    toPositionType(child2.moves));
+                foreach (Position pos; empties) {
+                    if (is_skip(pos, child2.moves)) continue;
 					tmp = new Tree;
-                    tmp.fld = child2.fld;
+					tmp.moves = child2.moves ~ [MarkedPosition(pos, server_mark)];
 					tmp.root = child2;
-                    tmp.chosen_move = pos;
-                    tmp.fld[pos.i][pos.j] = server_mark;
 					//tmp.estimation = estimate_state(server_mark, tmp.fld);
                     child2.children ~= [tmp];
                 }
             }
         }
-		
+		writeln("processed in ", Clock.currTime() - startTime );
+        /*
         foreach (Tree child1; root.children) {
             foreach (Tree child2; child1.children) {
                 foreach (Tree child3; child2.children) {
@@ -345,20 +350,19 @@ class Game {
                 }
             }
         }
-
+*/
         foreach (Tree child1; root.children) {
             foreach (Tree child2; child1.children) {
-                child2.estimation = child2.children.fold!(helpermin).estimation;
+                child2.estimation = child2.children.fold!(helpermax).estimation;
                 child2.children = [];
             }
-        }*/
-
-        foreach (Tree child1; root.children) {
-            child1.estimation = child1.children.fold!(helpermax).estimation;
-            child1.children = [];
         }
 
-        return root.children.fold!(helpermin).moves[0].pos;
+        foreach (Tree child1; root.children) {
+			child1.estimation = child1.children.fold!(helpermin).estimation;
+			child1.children = [];
+        }
+        return root.children.fold!(helpermax).moves[0].pos;
     }
 }
 
@@ -470,7 +474,7 @@ void main() @trusted {
 
         // send client it's mark
         SysTime today = Clock.currTime();
-        if (today.dayOfYear % 2 == 0) {
+        if (today.dayOfYear % 2 != 0) {
             conn.write("O\r\n");
             game.server_mark = 'X';
         }
@@ -524,7 +528,7 @@ void main() @trusted {
             }
             if (!gameOver)
                 game.changeCurrent();
-            system("cls");
+            //system("cls");
             game.render();
         }
         writeln("Congratulations, ", game.current, " !");
