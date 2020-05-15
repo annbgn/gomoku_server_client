@@ -11,7 +11,7 @@ import std.array : array;
 import std.array : replicate;
 import std.algorithm : canFind;
 import std.datetime.systime : SysTime, Clock;
-    import std.algorithm.searching;
+import std.algorithm.searching;
 
 struct EstimationElem {
     int weight;
@@ -178,7 +178,7 @@ class Game {
         int result = 0;
         string pattern;
         string line;
-		ulong c;
+        ulong c;
         foreach (Position p; filled) {
             foreach (Direction d; allDirections) {
                 line = cellsAround(p, d, fld);
@@ -190,9 +190,9 @@ class Game {
 										c = count(line,pattern);
                         result -= c*weight_regex.weight;
                 }*/
-				result += 2*count(line, player_mark);
-				result += count(line, " ");
-				result -= 2*count(line, reverse_mark(player_mark));
+                result += 2 * count(line, player_mark);
+                result += count(line, " ");
+                result -= 2 * count(line, reverse_mark(player_mark));
             }
         }
         return result;
@@ -272,24 +272,26 @@ class Game {
             }
         }
 
-        
         foreach (Tree child1; root.children) {
             foreach (Tree child2; child1.children) {
-			auto empties = position_difference(get_empty_positions(field),
-                    toPositionType(child2.moves));
+                auto empties = position_difference(get_empty_positions(field),
+                        toPositionType(child2.moves));
                 foreach (Position pos; empties) {
-                    if (is_skip(pos, child2.moves)) continue;
-					tmp = new Tree;
-					tmp.moves = child2.moves ~ [MarkedPosition(pos, server_mark)];
-					tmp.root = child2;
-					tmp.estimation = estimate_state(server_mark, tmp.moves);
+                    if (is_skip(pos, child2.moves))
+                        continue;
+                    tmp = new Tree;
+                    tmp.moves = child2.moves ~ [
+                        MarkedPosition(pos, server_mark)
+                    ];
+                    tmp.root = child2;
+                    tmp.estimation = estimate_state(server_mark, tmp.moves);
                     child2.children ~= [tmp];
                 }
             }
         }
 
-		writeln("processed in ", Clock.currTime() - startTime );
-        
+        writeln("processed in ", Clock.currTime() - startTime);
+
         // and now reduce :)
 
         auto helpermax = (Tree t1, Tree t2) {
@@ -302,7 +304,7 @@ class Game {
                 return t1;
             return t2;
         };
-        
+
         foreach (Tree child1; root.children) {
             foreach (Tree child2; child1.children) {
                 child2.estimation = child2.children.fold!(helpermax).estimation;
@@ -311,8 +313,8 @@ class Game {
         }
 
         foreach (Tree child1; root.children) {
-			child1.estimation = child1.children.fold!(helpermin).estimation;
-			child1.children = [];
+            child1.estimation = child1.children.fold!(helpermin).estimation;
+            child1.children = [];
         }
         return root.children.fold!(helpermax).moves[0].pos;
     }

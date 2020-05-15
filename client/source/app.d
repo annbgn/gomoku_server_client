@@ -16,7 +16,7 @@ import std.array : array;
 import std.array : replicate;
 import std.algorithm : canFind;
 import std.datetime.systime : SysTime, Clock;
-    import std.algorithm.searching;
+import std.algorithm.searching;
 
 struct EstimationElem {
     int weight;
@@ -149,9 +149,9 @@ class Game {
                 return field[p.i][p.j];
             return '\0';
         };
-		auto res = around(pos, d, 4).map!(p => helperfunc(p));
+        auto res = around(pos, d, 4).map!(p => helperfunc(p));
         return to!string(res.array); // mapResult -> char[] -> string
-		}
+    }
 
     bool gameOver(Position pos, char mark) {
         bool ended = allDirections.any!(d => cellsAround(pos, d, field).hasSequence(mark, 5));
@@ -159,7 +159,7 @@ class Game {
         return (ended || draw);
     }
 
-	bool is_skip(Position pos, MarkedPosition[] moves) {
+    bool is_skip(Position pos, MarkedPosition[] moves) {
         auto fld = fill_field(field, moves);
         foreach (Direction d; allDirections) {
             auto str = (cellsAround(pos, d, fld));
@@ -177,13 +177,13 @@ class Game {
         field[pos.i][pos.j] = current;
     }
 
-	int estimate_state(char player_mark, MarkedPosition[] moves) {
+    int estimate_state(char player_mark, MarkedPosition[] moves) {
         char[rows][cols] fld = fill_field(moves);
         auto filled = get_non_empty_positions(fld);
         int result = 0;
         string pattern;
         string line;
-		ulong c;
+        ulong c;
         foreach (Position p; filled) {
             foreach (Direction d; allDirections) {
                 line = cellsAround(p, d, fld);
@@ -195,14 +195,15 @@ class Game {
                         result -= c*weight_regex.weight;
                 }
 				*/
-				result += 2*count(line, player_mark);
-				result += count(line, " ");
-				result -= 2*count(line, reverse_mark(player_mark));
+                result += 2 * count(line, player_mark);
+                result += count(line, " ");
+                result -= 2 * count(line, reverse_mark(player_mark));
             }
         }
         return result;
     }
-	Position[] get_empty_positions(char[rows][cols] fld) {
+
+    Position[] get_empty_positions(char[rows][cols] fld) {
         Position[] res = [];
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
@@ -235,7 +236,8 @@ class Game {
         }
         return result;
     }
-	 Position[] toPositionType(MarkedPosition[] input) {
+
+    Position[] toPositionType(MarkedPosition[] input) {
         Position[] res = [];
         foreach (MarkedPosition elem; input)
             res ~= [elem.pos];
@@ -275,24 +277,26 @@ class Game {
             }
         }
 
-        
         foreach (Tree child1; root.children) {
             foreach (Tree child2; child1.children) {
-			auto empties = position_difference(get_empty_positions(field),
-                    toPositionType(child2.moves));
+                auto empties = position_difference(get_empty_positions(field),
+                        toPositionType(child2.moves));
                 foreach (Position pos; empties) {
-                    if (is_skip(pos, child2.moves)) continue;
-					tmp = new Tree;
-					tmp.moves = child2.moves ~ [MarkedPosition(pos, client_mark)];
-					tmp.root = child2;
-					tmp.estimation = estimate_state(client_mark, tmp.moves);
+                    if (is_skip(pos, child2.moves))
+                        continue;
+                    tmp = new Tree;
+                    tmp.moves = child2.moves ~ [
+                        MarkedPosition(pos, client_mark)
+                    ];
+                    tmp.root = child2;
+                    tmp.estimation = estimate_state(client_mark, tmp.moves);
                     child2.children ~= [tmp];
                 }
             }
         }
 
-		writeln("processed in ", Clock.currTime() - startTime );
-        
+        writeln("processed in ", Clock.currTime() - startTime);
+
         // and now reduce :)
 
         auto helpermax = (Tree t1, Tree t2) {
@@ -305,7 +309,7 @@ class Game {
                 return t1;
             return t2;
         };
-        
+
         foreach (Tree child1; root.children) {
             foreach (Tree child2; child1.children) {
                 child2.estimation = child2.children.fold!(helpermax).estimation;
@@ -314,8 +318,8 @@ class Game {
         }
 
         foreach (Tree child1; root.children) {
-			child1.estimation = child1.children.fold!(helpermin).estimation;
-			child1.children = [];
+            child1.estimation = child1.children.fold!(helpermin).estimation;
+            child1.children = [];
         }
         return root.children.fold!(helpermax).moves[0].pos;
     }
@@ -451,7 +455,9 @@ void main() @trusted {
     auto hp = parse_cli_args(config.hostport);
 
     runTask({
+
     
+
         {
             auto conn = connectTCP(hp.host, hp.port);
             Game game = new Game;
@@ -472,7 +478,7 @@ void main() @trusted {
 
                 writeln();
                 if (game.current == game.client_mark) {
-					/*
+                    /*
                     while (1) {
                         write("Hi, Client (", game.client_mark, ")! hint: type aA: ");
                         inputString = readln();
@@ -490,13 +496,13 @@ void main() @trusted {
                     conn.write(inputString);
                     gameOver = game.gameOver(inputPosition, game.client_mark);
 					*/
-					Position move = game.where_to_move(4, 20);
-                writeln("Hi, Client (", game.client_mark,
-                    ")! AI chose to move to position ", move);
-                game.setInput(move);
-                inputString = writeInput(move) ~ "\r\n";
-                conn.write(inputString);
-                gameOver = game.gameOver(move, game.client_mark);
+                    Position move = game.where_to_move(4, 20);
+                    writeln("Hi, Client (", game.client_mark,
+                        ")! AI chose to move to position ", move);
+                    game.setInput(move);
+                    inputString = writeInput(move) ~ "\r\n";
+                    conn.write(inputString);
+                    gameOver = game.gameOver(move, game.client_mark);
                 }
                 else {
                     write("Waiting for Server(", game.server_mark, ")'s turn..\n");
