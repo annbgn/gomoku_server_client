@@ -10,8 +10,7 @@ import std.regex;
 import std.array : array;
 import std.array : replicate;
 import std.algorithm : canFind;
-    import std.datetime.systime : SysTime, Clock;
-
+import std.datetime.systime : SysTime, Clock;
 
 struct EstimationElem {
     int weight;
@@ -55,18 +54,40 @@ const EstimationElem[] GlobalEstimationChart = [
 
 const string GlobalEmptyPattern = "    *    ";
 
-struct MarkedPosition  {Position pos; char mark;}
+struct MarkedPosition {
+    Position pos;
+    char mark;
+}
+
 class Tree {
     MarkedPosition[] moves = [];
     int estimation = 0;
-    //Position chosen_move;
     Tree[] children = [];
     Tree root;
 }
 
-char[15][15]  init_field() {char[15][15] fld; for(int i = 0; i < 15;i++){for (int j = 0; j < 15; j++)fld[i][j] = ' ';} return fld;}
-char[15][15] fill_field(MarkedPosition[] moves) {auto fld = init_field(); foreach(MarkedPosition mp; moves) fld[mp.pos.i][mp.pos.j] = mp.mark; return fld;}
-char[15][15] fill_field(char[15][15] already_filled, MarkedPosition[] moves) {auto fld = already_filled; foreach(MarkedPosition mp; moves) fld[mp.pos.i][mp.pos.j] = mp.mark; return fld;}
+char[15][15] init_field() {
+    char[15][15] fld;
+    for (int i = 0; i < 15; i++) {
+        for (int j = 0; j < 15; j++)
+            fld[i][j] = ' ';
+    }
+    return fld;
+}
+
+char[15][15] fill_field(MarkedPosition[] moves) {
+    auto fld = init_field();
+    foreach (MarkedPosition mp; moves)
+        fld[mp.pos.i][mp.pos.j] = mp.mark;
+    return fld;
+}
+
+char[15][15] fill_field(char[15][15] already_filled, MarkedPosition[] moves) {
+    auto fld = already_filled;
+    foreach (MarkedPosition mp; moves)
+        fld[mp.pos.i][mp.pos.j] = mp.mark;
+    return fld;
+}
 
 class Game {
     const uint rows = 15;
@@ -78,8 +99,6 @@ class Game {
     Direction[] allDirections = [
         Direction(1, 0), Direction(0, 1), Direction(1, 1), Direction(1, -1)
     ];
-
-	
 
     void render() @safe {
         write("  ");
@@ -121,12 +140,11 @@ class Game {
     }
 
     string cellsAround(Position pos, Direction d, char[rows][cols] fld) {
-        // d - is an element of  alldirections so it might be Direction(1,0), Direction(0,1), Direction(1,1), Direction(1,-1)
         auto helperfunc = (Position p) {
             if ((p.i < rows) && (p.j < cols))
                 return fld[p.i][p.j];
             return '\0';
-        }; //allows not to get rangeerror and not affect hassequence logic
+        };
         auto res = around(pos, d, 4).map!(p => helperfunc(p));
         return to!string(res.array); // mapResult -> char[] -> string
     }
@@ -137,25 +155,17 @@ class Game {
         return (ended || draw);
     }
 
-	bool is_skip(Position pos, MarkedPosition[] moves) {
-		auto fld = fill_field(field,moves);
-		//bool res = true;
-		foreach (Direction d; allDirections){
-			auto str = (cellsAround(pos, d, fld)); 
-			if (! (str == to!string(replicate(" ", str.length))) ) return false;
-			}
-		return true;
+    bool is_skip(Position pos, MarkedPosition[] moves) {
+        auto fld = fill_field(field, moves);
+        foreach (Direction d; allDirections) {
+            auto str = (cellsAround(pos, d, fld));
+            if (!(str == to!string(replicate(" ", str.length))))
+                return false;
+        }
+        return true;
     }
 
     bool is_draw() {
-        //simply check that there are no empty cells
-        //due to lazy evaluations it'll work ok only if called after checking for win/lose, because even fully occupied board might be not draw
-        /*for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < cols; j++) {
-                if ((field[i][j] != 'X') || (field[i][j] != 'O'))
-                    return true;
-            }
-        }*/
         return false;
     }
 
@@ -164,95 +174,105 @@ class Game {
     }
 
     int estimate_state(char player_mark, MarkedPosition[] moves) {
-		char[rows][cols] fld = fill_field(moves);
-		auto filled = get_non_empty_positions(fld);
-		int result = 0;
+        char[rows][cols] fld = fill_field(moves);
+        auto filled = get_non_empty_positions(fld);
+        int result = 0;
         string pattern;
-		string line;
-        foreach (Position p; filled){
-                foreach (Direction d; allDirections) {
-                    line = cellsAround(p, d, fld);
-                    foreach (EstimationElem weight_regex; GlobalEstimationChart) {
-                        pattern = replace(weight_regex.pattern, '*', player_mark);
-                        if (!matchAll(line, pattern).empty) {
-                            result += weight_regex.weight;
-                        }
-						pattern = replace(weight_regex.pattern, '*', reverse_mark(player_mark));
-                        if (!matchAll(line, pattern).empty) {
-                            result -= weight_regex.weight;
-                        }
+        string line;
+        foreach (Position p; filled) {
+            foreach (Direction d; allDirections) {
+                line = cellsAround(p, d, fld);
+                foreach (EstimationElem weight_regex; GlobalEstimationChart) {
+                    pattern = replace(weight_regex.pattern, '*', player_mark);
+                    if (!matchAll(line, pattern).empty) {
+                        result += weight_regex.weight;
+                    }
+                    pattern = replace(weight_regex.pattern, '*', reverse_mark(player_mark));
+                    if (!matchAll(line, pattern).empty) {
+                        result -= weight_regex.weight;
                     }
                 }
-           }
+            }
+        }
         return result;
     }
-	
+
     Position[] get_empty_positions(char[rows][cols] fld) {
         Position[] res = [];
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
                 if (fld[i][j] == ' ')
-                    res ~= [Position(i,j)];
+                    res ~= [Position(i, j)];
             }
         }
-		// sort to start as close to the center as possible
-		return res.sort!("(abs(7-to!int(a.i)) + abs(7-to!int(a.j))) < (abs(7-to!int(b.i)) + abs(7-to!int(b.j)))").array;  
-    }    
+        // sort to start as close to the center as possible
+        return res.sort!("(abs(7-to!int(a.i)) + abs(7-to!int(a.j))) < (abs(7-to!int(b.i)) + abs(7-to!int(b.j)))")
+            .array;
+    }
 
-	Position[] get_non_empty_positions(char[rows][cols] fld) {
+    Position[] get_non_empty_positions(char[rows][cols] fld) {
         Position[] res = [];
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
                 if (fld[i][j] != ' ')
-                    res ~= [Position(i,j)];
+                    res ~= [Position(i, j)];
             }
         }
-		return res;
-    } 
+        return res;
+    }
 
-	Position[] position_difference(Position[] empties, Position[] nonempties){
-	Position[] result = [];
-    foreach(Position elem; empties){if (!nonempties.canFind(elem)) {result ~= elem;}}
-	return result;
-	}
+    Position[] position_difference(Position[] empties, Position[] nonempties) {
+        Position[] result = [];
+        foreach (Position elem; empties) {
+            if (!nonempties.canFind(elem)) {
+                result ~= elem;
+            }
+        }
+        return result;
+    }
 
-	Position[] toPositionType(MarkedPosition[] input ){
-		Position[] res = [];
-		foreach (MarkedPosition elem; input) res ~= [elem.pos];
-			return res;
-	}
+    Position[] toPositionType(MarkedPosition[] input) {
+        Position[] res = [];
+        foreach (MarkedPosition elem; input)
+            res ~= [elem.pos];
+        return res;
+    }
 
     Position where_to_move(int depth, int width) {
-		auto root = new Tree;
+        auto root = new Tree;
         auto possibilities = get_empty_positions(field);
-		auto tmp = new Tree;
+        auto tmp = new Tree;
 
-		if (possibilities.length == rows*cols) return Position(to!int(rows /2), to!int(cols/2));
+        if (possibilities.length == rows * cols)
+            return Position(to!int(rows / 2), to!int(cols / 2));
 
-    SysTime startTime = Clock.currTime();
+        SysTime startTime = Clock.currTime();
 
-	foreach (Position pos; possibilities) {
-            if (is_skip(pos, root.moves)) continue;
-			tmp = new Tree;
-			tmp.moves ~= MarkedPosition(pos, server_mark);				
-			tmp.root = root;
+        foreach (Position pos; possibilities) {
+            if (is_skip(pos, root.moves))
+                continue;
+            tmp = new Tree;
+            tmp.moves ~= MarkedPosition(pos, server_mark);
+            tmp.root = root;
             root.children ~= [tmp];
         }
 
         foreach (Tree child; root.children) {
-		auto empties = position_difference(get_empty_positions(field), toPositionType(child.moves));
-		foreach (Position pos; empties) {
-                if (is_skip(pos, child.moves)) continue;
-				tmp = new Tree;
-				tmp.moves = child.moves ~ [MarkedPosition(pos,client_mark)];
+            auto empties = position_difference(get_empty_positions(field),
+                    toPositionType(child.moves));
+            foreach (Position pos; empties) {
+                if (is_skip(pos, child.moves))
+                    continue;
+                tmp = new Tree;
+                tmp.moves = child.moves ~ [MarkedPosition(pos, client_mark)];
                 tmp.root = child;
-    			tmp.estimation = estimate_state(server_mark, tmp.moves);
+                tmp.estimation = estimate_state(server_mark, tmp.moves);
                 child.children ~= [tmp];
             }
         }
-		
-    writeln("processed in ", startTime - Clock.currTime() );
-		/*
+
+        writeln("processed in ", startTime - Clock.currTime());
+        /*
         foreach (Tree child1; root.children) {
             foreach (Tree child2; child1.children) {
                 foreach (Position pos; get_empty_positions(child2.fld)) {
@@ -315,7 +335,7 @@ class Game {
                 return t1;
             return t2;
         };
-		/*
+        /*
 
         foreach (Tree child1; root.children) {
             foreach (Tree child2; child1.children) {
@@ -347,7 +367,6 @@ bool hasSequence(Range, V)(Range r, V val, size_t target) {
     foreach (e; r) {
         if (e == val) {
             counter++;
-            // cool place to embed ai logic
             if (counter == target)
                 return true;
         }
@@ -373,8 +392,6 @@ struct PosToDirRange {
 }
 
 PosToDirRange around(Position center, Direction dir, uint radius) {
-    // returns radius(4) nearest points to center(i,j) in chosen direction
-    // if near border, then less than 4
     uint left = min(radius, borderDistance(center, minusDir(dir)));
     uint right = min(radius, borderDistance(center, dir)) + 1;
     auto res = PosToDirRange(Position(center.i - dir.i * left,
@@ -507,7 +524,7 @@ void main() @trusted {
             }
             if (!gameOver)
                 game.changeCurrent();
-            //system("cls");
+            system("cls");
             game.render();
         }
         writeln("Congratulations, ", game.current, " !");
@@ -515,39 +532,36 @@ void main() @trusted {
     runApplication();
 }
 
-
 unittest {
-char[15][15] fld = init_field();
-fld[0][0] = 'X';
-auto game =  new Game;
+    char[15][15] fld = init_field();
+    fld[0][0] = 'X';
+    auto game = new Game;
 
-assert (15 == game.estimate_state('X', fld));
-}
-
-
-
-unittest {
-char[15][15] fld = init_field();
-fld[0][0] = 'X';
-fld[14][14] = 'O';
-auto game =  new Game;
-
-assert (0 == game.estimate_state('X', fld));
+    assert(15 == game.estimate_state('X', fld));
 }
 
 unittest {
-char[15][15] fld = init_field();
-fld[0][0] = 'X';
-int counter = 0;
+    char[15][15] fld = init_field();
+    fld[0][0] = 'X';
+    fld[14][14] = 'O';
+    auto game = new Game;
 
-auto game = new Game;
-for (int i = 0;  i< 15; i++){
-for (int j = 0; j < 15; j++){
-if ((i==0) && (j==0)) continue;
-counter = counter +to!int(game.is_skip(Position(i,j), fld));}}
-writeln (counter);
-assert (counter == 3*4);
+    assert(0 == game.estimate_state('X', fld));
 }
 
+unittest {
+    char[15][15] fld = init_field();
+    fld[0][0] = 'X';
+    int counter = 0;
 
-//todo add test for position difference
+    auto game = new Game;
+    for (int i = 0; i < 15; i++) {
+        for (int j = 0; j < 15; j++) {
+            if ((i == 0) && (j == 0))
+                continue;
+            counter = counter + to!int(game.is_skip(Position(i, j), fld));
+        }
+    }
+    writeln(counter);
+    assert(counter == 3 * 4);
+}
