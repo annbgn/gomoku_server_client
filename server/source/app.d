@@ -10,6 +10,8 @@ import std.regex;
 import std.array : array;
 import std.array : replicate;
 import std.algorithm : canFind;
+    import std.datetime.systime : SysTime, Clock;
+
 
 struct EstimationElem {
     int weight;
@@ -53,15 +55,18 @@ const EstimationElem[] GlobalEstimationChart = [
 
 const string GlobalEmptyPattern = "    *    ";
 
+struct MarkedPosition  {Position pos; char mark;}
 class Tree {
-    char[15][15] fld;
+    MarkedPosition[] moves = [];
     int estimation = 0;
-    Position chosen_move;
+    //Position chosen_move;
     Tree[] children = [];
     Tree root;
 }
 
 char[15][15]  init_field() {char[15][15] fld; for(int i = 0; i < 15;i++){for (int j = 0; j < 15; j++)fld[i][j] = ' ';} return fld;}
+char[15][15] fill_field(MarkedPosition[] moves) {auto fld = init_field(); foreach(MarkedPosition mp; moves) fld[mp.pos.i][mp.pos.j] = mp.mark; return fld;}
+char[15][15] fill_field(char[15][15] already_filled, MarkedPosition[] moves) {auto fld = already_filled; foreach(MarkedPosition mp; moves) fld[mp.pos.i][mp.pos.j] = mp.mark; return fld;}
 
 class Game {
     const uint rows = 15;
@@ -132,10 +137,14 @@ class Game {
         return (ended || draw);
     }
 
-	bool is_skip(Position pos, char[rows][cols] fld) {
-		auto helperfunc = (Direction d) {auto str = (cellsAround(pos, d, fld)); return (str == to!string(replicate(" ", str.length)));}; // bc isWhite works only with char, not string		
-        bool empty = allDirections.all!(helperfunc);
-        return empty;
+	bool is_skip(Position pos, MarkedPosition[] moves) {
+		auto fld = fill_field(field,moves);
+		//bool res = true;
+		foreach (Direction d; allDirections){
+			auto str = (cellsAround(pos, d, fld)); 
+			if (! (str == to!string(replicate(" ", str.length))) ) return false;
+			}
+		return true;
     }
 
     bool is_draw() {
@@ -154,16 +163,15 @@ class Game {
         field[pos.i][pos.j] = current;
     }
 
-    int estimate_state(char player_mark, char[rows][cols] fld) {
-        //counts matches for evety point for every regex pattern
-        //i don't even wanna think what nesting depth is. it'd been a total mistake to implement trees
-        int result = 0;
+    int estimate_state(char player_mark, MarkedPosition[] moves) {
+		char[rows][cols] fld = fill_field(moves);
+		auto filled = get_non_empty_positions(fld);
+		int result = 0;
         string pattern;
 		string line;
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < cols; j++) {
+        foreach (Position p; filled){
                 foreach (Direction d; allDirections) {
-                    line = cellsAround(Position(i, j), d, fld);
+                    line = cellsAround(p, d, fld);
                     foreach (EstimationElem weight_regex; GlobalEstimationChart) {
                         pattern = replace(weight_regex.pattern, '*', player_mark);
                         if (!matchAll(line, pattern).empty) {
@@ -175,13 +183,11 @@ class Game {
                         }
                     }
                 }
-            }
-        }
+           }
         return result;
     }
 	
     Position[] get_empty_positions(char[rows][cols] fld) {
-		
         Position[] res = [];
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
@@ -189,64 +195,68 @@ class Game {
                     res ~= [Position(i,j)];
             }
         }
-		// sort to start as close to the center as possible, but it works weirdly.
-		// i expect smth like (7,7), (6,7), (7,6), (7,8), (8,7), (6,6) ...
-		// but i get Position(0, 14), Position(1, 13), Position(14, 0), Position(2, 12), Position(13, 1), Position(3, 11), Position(12, 2), Position(4, 10)
-		// solved: it was magic of uint
-		// todo: rewrite Position(uint i, uint j) to ints  and remove to!int below
-        return res.sort!("(abs(7-to!int(a.i)) + abs(7-to!int(a.j))) < (abs(7-to!int(b.i)) + abs(7-to!int(b.j)))").array;  
+		// sort to start as close to the center as possible
+		return res.sort!("(abs(7-to!int(a.i)) + abs(7-to!int(a.j))) < (abs(7-to!int(b.i)) + abs(7-to!int(b.j)))").array;  
     }    
 
+	Position[] get_non_empty_positions(char[rows][cols] fld) {
+        Position[] res = [];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if (fld[i][j] != ' ')
+                    res ~= [Position(i,j)];
+            }
+        }
+		return res;
+    } 
+
+	Position[] position_difference(Position[] empties, Position[] nonempties){
+	Position[] result = [];
+    foreach(Position elem; empties){if (!nonempties.canFind(elem)) {result ~= elem;}}
+	return result;
+	}
+
+	Position[] toPositionType(MarkedPosition[] input ){
+		Position[] res = [];
+		foreach (MarkedPosition elem; input) res ~= [elem.pos];
+			return res;
+	}
+
     Position where_to_move(int depth, int width) {
-		// no matter what depth is
-		// but width is what  matters. it limits availiable and empty cells by <width> closest to center	
-        auto root = new Tree;
-        root.fld = field;
+		auto root = new Tree;
         auto possibilities = get_empty_positions(field);
-		writeln(possibilities);
 		auto tmp = new Tree;
 
 		if (possibilities.length == rows*cols) return Position(to!int(rows /2), to!int(cols/2));
 
-        // let depth = 4, bc i REALLY  can't imagine how to write a loop which can generate possibilities.length nodes on 1 step, possibilities.length - i nodes on i-th step, where i stands for depth. And how to fill in this structure after it is initialized :(
-        // i guess it might work if d had smth like __getattr__('children') for lvl in range(depth)
+    SysTime startTime = Clock.currTime();
 
-		// todo rewrite it in evals :smartass: :smiling_imp:
-		// :sad_imp: it seems there's no eval() func in D except arith-eval lib, but this one supports only math operaors
-
-        foreach (Position pos; possibilities[0..min(possibilities.length-1, width)]) {
-            if (is_skip(pos, field)) continue;
+	foreach (Position pos; possibilities) {
+            if (is_skip(pos, root.moves)) continue;
 			tmp = new Tree;
-			tmp.fld = field;				
+			tmp.moves ~= MarkedPosition(pos, server_mark);				
 			tmp.root = root;
-            tmp.chosen_move = pos;
-            tmp.fld[pos.i][pos.j] = server_mark;
             root.children ~= [tmp];
         }
-		writeln ("here ", root.children.length); // 1 - 12-32, 2 < 64
-		int cntr = 0;
-		int cntr2 = 0;
+
         foreach (Tree child; root.children) {
-			auto empties =  get_empty_positions(child.fld);
-            foreach (Position pos; empties[0..min(empties.length-1, to!int(width*0.75))]) {
-				cntr ++;
-                if (is_skip(pos, child.fld)) continue;
-				cntr2++;
+		auto empties = position_difference(get_empty_positions(field), toPositionType(child.moves));
+		foreach (Position pos; empties) {
+                if (is_skip(pos, child.moves)) continue;
 				tmp = new Tree;
-				tmp.fld = child.fld;
+				tmp.moves = child.moves ~ [MarkedPosition(pos,client_mark)];
                 tmp.root = child;
-                tmp.chosen_move = pos;
-                tmp.fld[pos.i][pos.j] = client_mark;
-				tmp.estimation = estimate_state(server_mark, tmp.fld);
+    			tmp.estimation = estimate_state(server_mark, tmp.moves);
                 child.children ~= [tmp];
             }
         }
-		writeln ("here2 ",  cntr, " ", cntr2);  // 20 * 15  
+		
+    writeln("processed in ", startTime - Clock.currTime() );
 		/*
         foreach (Tree child1; root.children) {
             foreach (Tree child2; child1.children) {
                 foreach (Position pos; get_empty_positions(child2.fld)) {
-                    if (is_skip(pos, child2.fld)) continue;
+                    //if (is_skip(pos, child2.fld)) continue;
 					tmp = new Tree;
                     tmp.fld = child2.fld;
 					tmp.root = child2;
@@ -257,7 +267,6 @@ class Game {
                 }
             }
         }
-		writeln ("here3");
 		
         foreach (Tree child1; root.children) {
             foreach (Tree child2; child1.children) {
@@ -274,7 +283,7 @@ class Game {
                 }
             }
         }
-		writeln ("here4");
+
         foreach (Tree child1; root.children) {
             foreach (Tree child2; child1.children) {
                 foreach (Tree child3; child2.children) {
@@ -307,7 +316,7 @@ class Game {
             return t2;
         };
 		/*
-		writeln ("here5");
+
         foreach (Tree child1; root.children) {
             foreach (Tree child2; child1.children) {
                 foreach (Tree child3; child2.children) {
@@ -316,20 +325,20 @@ class Game {
                 }
             }
         }
-		writeln ("here6");
+
         foreach (Tree child1; root.children) {
             foreach (Tree child2; child1.children) {
                 child2.estimation = child2.children.fold!(helpermin).estimation;
                 child2.children = [];
             }
         }*/
-		writeln ("here7");
+
         foreach (Tree child1; root.children) {
             child1.estimation = child1.children.fold!(helpermax).estimation;
             child1.children = [];
         }
 
-        return root.children.fold!(helpermin).chosen_move;
+        return root.children.fold!(helpermin).moves[0].pos;
     }
 }
 
@@ -539,3 +548,6 @@ counter = counter +to!int(game.is_skip(Position(i,j), fld));}}
 writeln (counter);
 assert (counter == 3*4);
 }
+
+
+//todo add test for position difference
