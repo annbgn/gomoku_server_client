@@ -93,6 +93,38 @@ char[15][15] fill_field(char[15][15] already_filled, MarkedPosition[] moves) {
     return fld;
 }
 
+import std.datetime.timezone : LocalTime;
+import std.regex;
+import std.array : array;
+import std.algorithm : canFind;
+
+struct EstimationElem {
+    int weight;
+    string pattern;
+}
+
+//dfmt off
+const EstimationElem[] GlobalEstimationChart = [
+    EstimationElem(10000, "*****"),
+	EstimationElem(1000, " **** "),
+    EstimationElem(500, "**** "),
+	EstimationElem(400, "* ***"),
+	EstimationElem(400, "** **"),
+    EstimationElem(100, "  ***   "),
+	EstimationElem(80, "  ***  "),
+    EstimationElem(75, " ***  "),
+	EstimationElem(50, " *** "),
+	EstimationElem(50, "***  "),
+    EstimationElem(25, "* ** "),
+	EstimationElem(25, "** * "),
+	EstimationElem(25,  "*  **"),
+    EstimationElem(10, "   ***   "),
+	EstimationElem(5, " ** ")
+];
+//dfmt on
+
+const string GlobalEmptyPattern = "    *    ";
+
 class Game {
     const uint rows = 15;
     const uint cols = 15;
@@ -151,6 +183,7 @@ class Game {
         };
         auto res = around(pos, d, 4).map!(p => helperfunc(p));
         return to!string(res.array); // mapResult -> char[] -> string
+
     }
 
     bool gameOver(Position pos, char mark) {
@@ -170,6 +203,15 @@ class Game {
     }
 
     bool is_draw() {
+        int counter = 0;
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                if ((field[i][j] == 'X') || (field[i][j] == 'O'))
+                    counter++;
+            }
+        }
+        if (counter == rows * cols)
+            return true;
         return false;
     }
 
@@ -232,6 +274,7 @@ class Game {
         foreach (Position elem; empties) {
             if (!nonempties.canFind(elem)) {
                 result ~= elem;
+
             }
         }
         return result;
@@ -323,6 +366,7 @@ class Game {
         }
         return root.children.fold!(helpermax).moves[0].pos;
     }
+
 }
 
 bool hasSequence(Range, V)(Range r, V val, size_t target) {
@@ -384,7 +428,6 @@ struct Position {
 
 struct Direction {
     uint i, j;
-
 }
 
 Direction minusDir(Direction d) {
@@ -456,8 +499,6 @@ void main() @trusted {
 
     runTask({
 
-    
-
         {
             auto conn = connectTCP(hp.host, hp.port);
             Game game = new Game;
@@ -497,6 +538,7 @@ void main() @trusted {
                     gameOver = game.gameOver(inputPosition, game.client_mark);
 					*/
                     Position move = game.where_to_move(4, 20);
+
                     writeln("Hi, Client (", game.client_mark,
                         ")! AI chose to move to position ", move);
                     game.setInput(move);

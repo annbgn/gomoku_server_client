@@ -165,6 +165,7 @@ class Game {
     }
 
     bool is_draw() {
+
         return false;
     }
 
@@ -228,6 +229,7 @@ class Game {
             if (!nonempties.canFind(elem)) {
                 result ~= elem;
             }
+
         }
         return result;
     }
@@ -310,6 +312,7 @@ class Game {
                 child2.estimation = child2.children.fold!(helpermax).estimation;
                 child2.children = [];
             }
+
         }
 
         foreach (Tree child1; root.children) {
@@ -379,7 +382,6 @@ struct Position {
 
 struct Direction {
     uint i, j;
-
 }
 
 Direction minusDir(Direction d) {
@@ -482,7 +484,7 @@ void main() @trusted {
             }
             if (!gameOver)
                 game.changeCurrent();
-            //system("cls");
+            system("cls");
             game.render();
         }
         writeln("Congratulations, ", game.current, " !");
@@ -523,3 +525,4 @@ unittest {
     writeln(counter);
     assert(counter == 3 * 4);
 }
+
