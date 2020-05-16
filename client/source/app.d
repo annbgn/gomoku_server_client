@@ -18,6 +18,10 @@ import std.algorithm : canFind;
 import std.datetime.systime : SysTime, Clock;
 import std.algorithm.searching;
 
+import std.regex;
+import std.array : array;
+import std.algorithm : canFind;
+
 struct EstimationElem {
     int weight;
     string pattern;
@@ -93,37 +97,6 @@ char[15][15] fill_field(char[15][15] already_filled, MarkedPosition[] moves) {
     return fld;
 }
 
-import std.datetime.timezone : LocalTime;
-import std.regex;
-import std.array : array;
-import std.algorithm : canFind;
-
-struct EstimationElem {
-    int weight;
-    string pattern;
-}
-
-//dfmt off
-const EstimationElem[] GlobalEstimationChart = [
-    EstimationElem(10000, "*****"),
-	EstimationElem(1000, " **** "),
-    EstimationElem(500, "**** "),
-	EstimationElem(400, "* ***"),
-	EstimationElem(400, "** **"),
-    EstimationElem(100, "  ***   "),
-	EstimationElem(80, "  ***  "),
-    EstimationElem(75, " ***  "),
-	EstimationElem(50, " *** "),
-	EstimationElem(50, "***  "),
-    EstimationElem(25, "* ** "),
-	EstimationElem(25, "** * "),
-	EstimationElem(25,  "*  **"),
-    EstimationElem(10, "   ***   "),
-	EstimationElem(5, " ** ")
-];
-//dfmt on
-
-const string GlobalEmptyPattern = "    *    ";
 
 class Game {
     const uint rows = 15;
