@@ -198,10 +198,12 @@ class Game {
         int result = 0;
         string pattern;
         string line;
+        string line_potential;
         ulong c;
         foreach (Position p; filled) {
             foreach (Direction d; allDirections) {
-                line = cellsAround(p, d, fld);
+                line_potential = cellsAround(p, d, fld);
+                line = cellsAround(p, d, field);
                 /*foreach (EstimationElem weight_regex; GlobalEstimationChart) {
                     pattern = replace(weight_regex.pattern, '*', player_mark);					c = count(line,pattern);
                         result += c*weight_regex.weight;
@@ -210,9 +212,11 @@ class Game {
                         result -= c*weight_regex.weight;
                 }
 				*/
-                result += 2 * count(line, player_mark);
-                result += count(line, " ");
-                result -= 2 * count(line, reverse_mark(player_mark));
+
+				//it's good to count both what we have already on field and what we would gain if move in this direction
+                result += 3 * count(line_potential, player_mark) +  2* (count(line_potential, player_mark) - count(line, player_mark)); // accent in attacking
+                result += count(line_potential, " ");
+                result -= 2 * count(line_potential, reverse_mark(player_mark));
             }
         }
         return result;
